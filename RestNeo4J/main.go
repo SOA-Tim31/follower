@@ -54,8 +54,11 @@ func main() {
 
 	postUserNode := router.Methods(http.MethodPost).Subrouter()
 	postUserNode.HandleFunc("/user", userHandler.CreateUser)
-	postUserNode.Use(userHandler.MiddlewareContentTypeSet)
 
+
+	postFollowBranch := router.Methods(http.MethodPost).Subrouter()
+    postFollowBranch.HandleFunc("/follower", userHandler.FollowUser)
+	
 	
 
 	cors := gorillaHandlers.CORS(gorillaHandlers.AllowedOrigins([]string{"*"}))
