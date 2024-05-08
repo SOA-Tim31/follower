@@ -3,6 +3,7 @@ package handlers
 import (
 	"Rest/data"
 	"Rest/domain"
+	"context"
 	"encoding/json"
 
 	// "context"
@@ -16,7 +17,7 @@ type KeyProduct struct{}
 
 type UserHandler struct {
 	logger *log.Logger
-	// NoSQL: injecting movie repository
+	
 	repo *data.UserRepository
 }
 
@@ -77,26 +78,7 @@ func NewUserHandler(l *log.Logger, r *data.UserRepository) *UserHandler {
 // 	}
 // }
 
-// func (m *MoviesHandler) GetAllMoviesByTitle(rw http.ResponseWriter, h *http.Request) {
-// 	vars := mux.Vars(h)
-// 	title := vars["title"]
 
-// 	movies, err := m.repo.GetAllNodesWithMovieLabelAndGivenTitle(title)
-// 	if err != nil {
-// 		m.logger.Print("Database exception: ", err)
-// 	}
-
-// 	if movies == nil {
-// 		return
-// 	}
-
-// 	err = movies.ToJSON(rw)
-// 	if err != nil {
-// 		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-// 		m.logger.Fatal("Unable to convert to json :", err)
-// 		return
-// 	}
-// }
 
 func (m *UserHandler) CreateUser(rw http.ResponseWriter, h *http.Request) {
 	var person domain.User
@@ -115,107 +97,51 @@ func (m *UserHandler) CreateUser(rw http.ResponseWriter, h *http.Request) {
 	rw.WriteHeader(http.StatusCreated)
 }
 
-// func (m *MoviesHandler) GetActorRole(rw http.ResponseWriter, h *http.Request) {
-// 	vars := mux.Vars(h)
-// 	role := vars["role"]
+func(m *UserHandler) FollowUser(rw http.ResponseWriter, h *http.Request){
+	
+	var users []domain.User
+	err := json.NewDecoder(h.Body).Decode(&users)
 
-// 	roles, err := m.repo.GetPersonWhoPlayedRole(role)
-// 	if err != nil {
-// 		m.logger.Print("Database exception: ", err)
-// 	}
+	if err != nil {
+		m.logger.Print("Can't decode request body: ", err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-// 	if roles == nil {
-// 		return
-// 	}
+	if len(users) < 2{
+		http.Error(rw, "Potrebno je poslati barem dve osobe", http.StatusBadRequest)
+		return
+	}
 
-// 	err = roles.ToJSON(rw)
-// 	if err != nil {
-// 		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-// 		m.logger.Fatal("Unable to convert to json :", err)
-// 		return
-// 	}
-// }
+	err = m.repo.FollowUser(&users[0], &users[1])
+	if err != nil {
+		m.logger.Print("Database exception: ", err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-// func (m *MoviesHandler) CreateMovie(rw http.ResponseWriter, h *http.Request) {
-// 	movie := h.Context().Value(KeyProduct{}).(*data.Movie)
-// 	err := m.repo.WriteMovie(movie)
-// 	if err != nil {
-// 		m.logger.Print("Database exception: ", err)
-// 		rw.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	rw.WriteHeader(http.StatusCreated)
-// }
+	rw.WriteHeader(http.StatusCreated)
+}
 
-// func (m *MoviesHandler) GetPersonWhoActedAndProducedMovie(rw http.ResponseWriter, h *http.Request) {
-// 	roles, err := m.repo.GetPersonWhoActedAndProducedMovie()
-// 	if err != nil {
-// 		m.logger.Print("Database exception: ", err)
-// 	}
 
-// 	if roles == nil {
-// 		return
-// 	}
 
-// 	err = roles.ToJSON(rw)
-// 	if err != nil {
-// 		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-// 		m.logger.Fatal("Unable to convert to json :", err)
-// 		return
-// 	}
-// }
+func (m *UserHandler) MiddlewareFollowingDeserialization(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, h *http.Request) {
+		newFollower := &domain.UserFollower{}
+		err := newFollower.FromJSON(h.Body)
+		if err != nil {
+			http.Error(rw, "Unable to decode json", http.StatusBadRequest)
+			m.logger.Fatal(err)
+			return
+		}
+		ctx := context.WithValue(h.Context(), KeyProduct{}, newFollower)
+		h = h.WithContext(ctx)
+		next.ServeHTTP(rw, h)
+	})
+}
 
-// func (m *MoviesHandler) GetKeanuMovies(rw http.ResponseWriter, h *http.Request) {
-// 	vars := mux.Vars(h)
-// 	limit, err := strconv.Atoi(vars["limit"])
-// 	if err != nil {
-// 		m.logger.Printf("Expected integer, got: %d", limit)
-// 		http.Error(rw, "Unable to convert limit to integer", http.StatusBadRequest)
-// 		return
-// 	}
 
-// 	movies, err := m.repo.GetKeanuMovies(limit)
-// 	if err != nil {
-// 		m.logger.Print("Database exception: ", err)
-// 	}
 
-// 	if movies == nil {
-// 		return
-// 	}
-
-// 	err = movies.ToJSON(rw)
-// 	if err != nil {
-// 		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-// 		m.logger.Fatal("Unable to convert to json :", err)
-// 		return
-// 	}
-// }
-
-// func (m *MoviesHandler) GetActorsWithMostMovies(rw http.ResponseWriter, h *http.Request) {
-// 	vars := mux.Vars(h)
-// 	limit, err := strconv.Atoi(vars["limit"])
-// 	if err != nil {
-// 		m.logger.Printf("Expected integer, got: %d", limit)
-// 		http.Error(rw, "Unable to convert limit to integer", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	actorMovies, err := m.repo.GetActorsWithMostMovies(limit)
-// 	if err != nil {
-// 		m.logger.Print("Database exception: ", err)
-// 	}
-
-// 	if actorMovies == nil {
-// 		return
-// 	}
-
-// 	err = actorMovies.ToJSON(rw)
-// 	if err != nil {
-// 		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
-// 		m.logger.Fatal("Unable to convert to json :", err)
-// 		return
-// 	}
-// }
 
 // func (m *MoviesHandler) MiddlewarePersonDeserialization(next http.Handler) http.Handler {
 // 	return http.HandlerFunc(func(rw http.ResponseWriter, h *http.Request) {
