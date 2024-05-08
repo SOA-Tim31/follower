@@ -3,6 +3,7 @@ package handlers
 import (
 	"Rest/data"
 	"Rest/domain"
+	"encoding/json"
 
 	// "context"
 	"log"
@@ -98,8 +99,14 @@ func NewUserHandler(l *log.Logger, r *data.UserRepository) *UserHandler {
 // }
 
 func (m *UserHandler) CreateUser(rw http.ResponseWriter, h *http.Request) {
-	person := h.Context().Value(KeyProduct{}).(*domain.User)
-	err := m.repo.WriteUser(person)
+	var person domain.User
+	err := json.NewDecoder(h.Body).Decode(&person)
+	if err != nil {
+		m.logger.Print("Can't decode request body: ", err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = m.repo.WriteUser(&person)
 	if err != nil {
 		m.logger.Print("Database exception: ", err)
 		rw.WriteHeader(http.StatusInternalServerError)

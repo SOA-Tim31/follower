@@ -18,10 +18,7 @@ import (
 func main() {
 	//Reading from environment, if not set we will default it to 8080.
 	//This allows flexibility in different environments (for eg. when running multiple docker api's and want to override the default port)
-	port := os.Getenv("PORT")
-	if len(port) == 0 {
-		port = "8080"
-	}
+	
 
 	// Initialize context
 	timeoutContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -59,34 +56,20 @@ func main() {
 	postUserNode.HandleFunc("/user", userHandler.CreateUser)
 	postUserNode.Use(userHandler.MiddlewareContentTypeSet)
 
-	// getActorRole := router.Methods(http.MethodGet).Subrouter()
-	// getActorRole.HandleFunc("/person/{role}", moviesHandler.GetActorRole)
-
-	// postMovieNode := router.Methods(http.MethodPost).Subrouter()
-	// postMovieNode.HandleFunc("/movies", moviesHandler.CreateMovie)
-	// postMovieNode.Use(moviesHandler.MiddlewareMovieDeserialization)
-
-	// getActorProducer := router.Methods(http.MethodGet).Subrouter()
-	// getActorProducer.HandleFunc("/actor/producer", moviesHandler.GetPersonWhoActedAndProducedMovie)
-
-	// getKeanuMovies := router.Methods(http.MethodGet).Subrouter()
-	// getKeanuMovies.HandleFunc("/actor/keanu/{limit}", moviesHandler.GetKeanuMovies)
-
-	// getActorsWithMostMovies := router.Methods(http.MethodGet).Subrouter()
-	// getActorsWithMostMovies.HandleFunc("/actor/most-movies/{limit}", moviesHandler.GetActorsWithMostMovies)
+	
 
 	cors := gorillaHandlers.CORS(gorillaHandlers.AllowedOrigins([]string{"*"}))
 
 	//Initialize the server
 	server := http.Server{
-		Addr:         ":" + port,
+		Addr:         ":89",
 		Handler:      cors(router),
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
 
-	logger.Println("Server listening on port", port)
+	logger.Println("Server listening on port 89")
 	//Distribute all the connections to goroutines
 	go func() {
 		err := server.ListenAndServe()

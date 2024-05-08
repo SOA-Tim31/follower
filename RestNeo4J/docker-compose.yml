@@ -12,10 +12,10 @@ services:
     #Mapping ports
     ports:
       # <port_on_local>:<port_in_machine>
-      - 8080:8080
+      - 89:8083
     #Will be accessible through os.Getenv("PORT")
     environment:
-      - PORT=8080
+      - PORT=8083
       # NoSQL: environment variable holding connection URI for Neo4J database
       # Local DB instance
       - NEO4J_DB=bolt://neo4j:7687
