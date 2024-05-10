@@ -82,3 +82,31 @@ func (mr *UserRepository) WriteUser(user *domain.User) error {
 	mr.logger.Println(savedPerson.(string))
 	return nil
 }
+
+
+func (mr *UserRepository) FollowUser(user *domain.User, userToFollow *domain.User) error {
+	ctx := context.Background()
+	session := mr.driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	
+	_, err := session.ExecuteWrite(ctx,
+		func(transaction neo4j.ManagedTransaction) (any, error) {
+			result, err := transaction.Run(ctx,
+				"match (user1:User), (user2:User) where user1.Username = $username AND user2.Username = $followUsername create (user1)-[r: IS_FOLLOWING]->(user2) return type(r)",
+				map[string]any{"username": user.Username, "followUsername": userToFollow.Username})
+			if err != nil {
+				return nil, err
+			}
+			if result.Next(ctx) {
+				return result.Record().Values[0], nil
+			}
+			return nil, result.Err()
+		})
+	if err != nil {
+		mr.logger.Println("Error inserting following:", err)
+		return err
+	}
+	
+	return nil
+}

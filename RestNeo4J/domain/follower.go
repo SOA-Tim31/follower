@@ -6,9 +6,9 @@ import (
 )
 
 type UserFollower struct {
-	UserId            string `json:"userId,omitempty"`
+	UserId            int32 `json:"userId,omitempty"`
 	Username          string `json:"username,omitempty"`
-	FollowingUserId   string `json:"followingUserId,omitempty"`
+	FollowingUserId   int32 `json:"followingUserId,omitempty"`
 	FollowingUsername string `json:"followingUsername,omitempty"`
 }
 
