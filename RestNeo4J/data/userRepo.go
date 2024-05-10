@@ -19,7 +19,7 @@ func New(logger *log.Logger) (*UserRepository, error) {
 	// Local instance
 	uri := "bolt://neo4j:7687"
 	user := "neo4j"
-	pass := "lenaana"
+	pass := "nekaSifra"
 	auth := neo4j.BasicAuth(user, pass, "")
 
 	driver, err := neo4j.NewDriverWithContext(uri, auth)

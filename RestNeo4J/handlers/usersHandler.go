@@ -3,6 +3,7 @@ package handlers
 import (
 	"Rest/data"
 	"Rest/domain"
+	"encoding/json"
 
 	// "context"
 	"log"
@@ -106,6 +107,24 @@ func (m *UserHandler) CreateUser(rw http.ResponseWriter, h *http.Request) {
 		return
 	}
 	rw.WriteHeader(http.StatusCreated)
+}
+
+func (f *UserHandler) CreateFollowing(rw http.ResponseWriter, h *http.Request) {
+	newFollowing := h.Context().Value(KeyProduct{}).(*domain.UserFollower)
+	user := domain.User{}
+	userToFollow := domain.User{}
+	// user.Id = newFollowing.UserId
+	user.Username = newFollowing.Username
+	userToFollow.Username = newFollowing.FollowingUsername
+	err := f.repo.SaveFollowing(&user, &userToFollow)
+	if err != nil {
+		f.logger.Print("Database exception: ", err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	user = domain.User{}
+	jsonData, _ := json.Marshal(user)
+	rw.Write(jsonData)
 }
 
 // func (m *MoviesHandler) GetActorRole(rw http.ResponseWriter, h *http.Request) {
