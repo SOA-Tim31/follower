@@ -18,7 +18,6 @@ import (
 func main() {
 	//Reading from environment, if not set we will default it to 8080.
 	//This allows flexibility in different environments (for eg. when running multiple docker api's and want to override the default port)
-	
 
 	// Initialize context
 	timeoutContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -55,11 +54,10 @@ func main() {
 	postUserNode := router.Methods(http.MethodPost).Subrouter()
 	postUserNode.HandleFunc("/user", userHandler.CreateUser)
 
-
 	postFollowBranch := router.Methods(http.MethodPost).Subrouter()
-    postFollowBranch.HandleFunc("/follower", userHandler.FollowUser)
-	
-	
+	postFollowBranch.HandleFunc("/follower", userHandler.FollowUser)
+	getRecommendationsRouter := router.Methods(http.MethodGet).Subrouter()
+	getRecommendationsRouter.HandleFunc("/recommendations/{userId}", userHandler.GetRecommendations)
 
 	cors := gorillaHandlers.CORS(gorillaHandlers.AllowedOrigins([]string{"*"}))
 

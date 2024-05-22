@@ -9,6 +9,8 @@ import (
 	// "context"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 	// "strconv"
 	// "github.com/gorilla/mux"
 )
@@ -17,7 +19,7 @@ type KeyProduct struct{}
 
 type UserHandler struct {
 	logger *log.Logger
-	
+
 	repo *data.UserRepository
 }
 
@@ -78,8 +80,6 @@ func NewUserHandler(l *log.Logger, r *data.UserRepository) *UserHandler {
 // 	}
 // }
 
-
-
 func (m *UserHandler) CreateUser(rw http.ResponseWriter, h *http.Request) {
 	var person domain.User
 	err := json.NewDecoder(h.Body).Decode(&person)
@@ -97,8 +97,8 @@ func (m *UserHandler) CreateUser(rw http.ResponseWriter, h *http.Request) {
 	rw.WriteHeader(http.StatusCreated)
 }
 
-func(m *UserHandler) FollowUser(rw http.ResponseWriter, h *http.Request){
-	
+func (m *UserHandler) FollowUser(rw http.ResponseWriter, h *http.Request) {
+
 	var users []domain.User
 	err := json.NewDecoder(h.Body).Decode(&users)
 
@@ -108,7 +108,7 @@ func(m *UserHandler) FollowUser(rw http.ResponseWriter, h *http.Request){
 		return
 	}
 
-	if len(users) < 2{
+	if len(users) < 2 {
 		http.Error(rw, "Potrebno je poslati barem dve osobe", http.StatusBadRequest)
 		return
 	}
@@ -123,7 +123,34 @@ func(m *UserHandler) FollowUser(rw http.ResponseWriter, h *http.Request){
 	rw.WriteHeader(http.StatusCreated)
 }
 
+func (f *UserHandler) GetRecommendations(rw http.ResponseWriter, h *http.Request) {
+	vars := mux.Vars(h)
+	id := vars["userId"]
 
+	// Assuming GetRecommendations should return a slice of domain.User
+	users, err := f.repo.GetRecommendations(id)
+	if err != nil {
+		http.Error(rw, "Database exception", http.StatusInternalServerError)
+		f.logger.Print("Database exception: ", err)
+		return
+	}
+
+	if users == nil || len(users) == 0 {
+		jsonData, err := json.Marshal([]domain.User{})
+		if err != nil {
+			http.Error(rw, "Error marshaling json", http.StatusInternalServerError)
+			f.logger.Print("Error marshaling json: ", err)
+			return
+		}
+		rw.Write(jsonData)
+		return
+	}
+
+	if err := json.NewEncoder(rw).Encode(users); err != nil {
+		http.Error(rw, "Unable to convert to json", http.StatusInternalServerError)
+		f.logger.Fatal("Unable to convert to json :", err)
+	}
+}
 
 func (m *UserHandler) MiddlewareFollowingDeserialization(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, h *http.Request) {
@@ -139,9 +166,6 @@ func (m *UserHandler) MiddlewareFollowingDeserialization(next http.Handler) http
 		next.ServeHTTP(rw, h)
 	})
 }
-
-
-
 
 // func (m *MoviesHandler) MiddlewarePersonDeserialization(next http.Handler) http.Handler {
 // 	return http.HandlerFunc(func(rw http.ResponseWriter, h *http.Request) {

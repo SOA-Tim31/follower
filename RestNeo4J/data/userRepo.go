@@ -4,6 +4,7 @@ import (
 	"Rest/domain"
 	"context"
 	"log"
+	"strconv"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
@@ -83,13 +84,57 @@ func (mr *UserRepository) WriteUser(user *domain.User) error {
 	return nil
 }
 
+func (mr *UserRepository) GetRecommendations(userId string) ([]*domain.User, error) {
+	ctx := context.Background()
+	session := mr.driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	intUserId, err := strconv.Atoi(userId) // Convert string userID to integer
+	if err != nil {
+		mr.logger.Println("Error converting userId to integer:", err)
+		return nil, err
+	}
+
+	userResults, err := session.ExecuteRead(ctx,
+		func(transaction neo4j.ManagedTransaction) (any, error) {
+			result, err := transaction.Run(ctx,
+				`MATCH (u:User)-[:IS_FOLLOWING]->(f:User)-[:IS_FOLLOWING]->(r:User)
+				WHERE u.Id = $userId AND NOT (u)-[:IS_FOLLOWING]->(r) AND r.Username <> u.Username
+				RETURN DISTINCT r.Id AS id, r.Username AS username
+				`,
+				map[string]any{"userId": intUserId}) // Use converted integer ID
+			if err != nil {
+				return nil, err
+			}
+
+			var users []*domain.User
+			for result.Next(ctx) {
+				record := result.Record()
+				id, _ := record.Get("id")
+				username, _ := record.Get("username")
+				users = append(users, &domain.User{
+					Id:       int32(id.(int64)), // Corrected line
+					Username: username.(string),
+				})
+			}
+			if result.Err() != nil {
+				return nil, result.Err()
+			}
+			return users, nil
+		})
+	if err != nil {
+		mr.logger.Println("Error querying search:", err)
+		return nil, err
+	}
+
+	return userResults.([]*domain.User), nil // Type assertion to a slice of pointers to domain.User
+}
 
 func (mr *UserRepository) FollowUser(user *domain.User, userToFollow *domain.User) error {
 	ctx := context.Background()
 	session := mr.driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
 
-	
 	_, err := session.ExecuteWrite(ctx,
 		func(transaction neo4j.ManagedTransaction) (any, error) {
 			result, err := transaction.Run(ctx,
@@ -107,6 +152,6 @@ func (mr *UserRepository) FollowUser(user *domain.User, userToFollow *domain.Use
 		mr.logger.Println("Error inserting following:", err)
 		return err
 	}
-	
+
 	return nil
 }
