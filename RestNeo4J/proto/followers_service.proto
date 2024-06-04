@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "proto/follower";
+
+service FollowerService{
+    rpc CreateUser(UserRequest) returns (UserResponse) {}
+    rpc FollowUser(FollowRequest) returns (FollowResponse) {}
+}
+
+message Follower{
+    uint64 UserId = 1;           
+	string Username = 2;      
+	uint64 FollowingUserId = 3;
+	string FollowingUsername = 4;
+}
+
+message User{
+    uint64 Id = 1;     
+	string Username = 2;
+}
+
+message UserRequest{
+    uint64 Id = 1;     
+	string Username = 2;
+}
+
+message UserResponse{
+    string messageConfirmation = 1;
+}
+
+message FollowRequest{
+  repeated string Username = 1;
+}
+
+message FollowResponse{
+  string messageConfirmation = 1;
+}

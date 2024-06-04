@@ -3,15 +3,18 @@ package main
 import (
 	"Rest/data"
 	"Rest/handlers"
+	follower "Rest/proto"
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	// "github.com/gorilla/mux"
 )
 
@@ -58,26 +61,31 @@ func main() {
 
 	postFollowBranch := router.Methods(http.MethodPost).Subrouter()
     postFollowBranch.HandleFunc("/follower", userHandler.FollowUser)
-	
-	
 
-	cors := gorillaHandlers.CORS(gorillaHandlers.AllowedOrigins([]string{"*"}))
-
-	//Initialize the server
-	server := http.Server{
-		Addr:         ":89",
-		Handler:      cors(router),
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+	//GRPC
+	listener, err := net.Listen("tcp", ":8089")
+	if err != nil {
+		log.Fatalln(err)
 	}
-
+	defer func(listener net.Listener) {
+		err := listener.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(listener)
 	logger.Println("Server listening on port 89")
+
+	userHandlergRPC := handlers.NewgRPCUserHandler(store)
+
+	grpcServer := grpc.NewServer()
+	reflection.Register(grpcServer)
+
+	follower.RegisterFollowerServiceServer(grpcServer, userHandlergRPC)
+
 	//Distribute all the connections to goroutines
 	go func() {
-		err := server.ListenAndServe()
-		if err != nil {
-			logger.Fatal(err)
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Fatal("server error: ", err)
 		}
 	}()
 
@@ -89,8 +97,5 @@ func main() {
 	logger.Println("Received terminate, graceful shutdown", sig)
 
 	//Try to shutdown gracefully
-	if server.Shutdown(timeoutContext) != nil {
-		logger.Fatal("Cannot gracefully shutdown...")
-	}
 	logger.Println("Server stopped")
 }
